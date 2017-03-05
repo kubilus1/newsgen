@@ -33,6 +33,7 @@ DEFAULT_MIN_OVERLAP_TOTAL = 15
 class POSifiedText(markovify.Text):
     
     last_words = []
+    keyword_tags = []
     last_state = None
 
     def word_split(self, sentence):
@@ -132,7 +133,13 @@ class POSifiedText(markovify.Text):
     def reset_text(self):
         print "Resetting last_words..."
         self.last_words = []
+        self.keyword_tags = []
         random.seed()
+
+    
+    def tags(self, words):
+        words = [ w.split('::')[0].rstrip('s').lower() for w in words if w.split('::')[1] in ['NNP','NNPS' ]]
+        return words
 
     def keywords(self, words):
         #skipits = ['DT', 'IN', 'CC', 'TO', 'PRP']
@@ -253,6 +260,7 @@ class POSifiedText(markovify.Text):
             if DEBUG:
                 print "BEST RATIO:", best_ratio
             self.last_words.extend(self.keywords(best_words))
+            self.keyword_tags.extend(self.tags(best_words))
             best_sentence = self.word_join(best_words)
             
  
@@ -360,10 +368,13 @@ class ArticleStore(object):
         try: 
             req = urllib2.Request(url)
             req.add_unredirected_header('User-Agent', 'Mozilla/5.0')
+            req.add_header('User-Agent', 'Mozilla/5.0')
             resp = urllib2.urlopen(req)
+            print "urllib2"
         except urllib2.HTTPError, err:
             print "ERR:", err
             resp = urllib.urlopen(url)
+            print "urllib"
 
         html = resp.read()
         soup = BeautifulSoup(html)
@@ -512,6 +523,10 @@ class ArticleStore(object):
         for i in range(random.randrange(3,7)):
             print
             print self.body()
+
+        #print 
+        #print "Tags: ", ", ".join(self.combo_model.keyword_tags)
+
 
     def quote(self, seed):
         arts.text_model.seed(seed)
