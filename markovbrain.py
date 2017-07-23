@@ -32,68 +32,6 @@ class POSifiedText(markovify.Text):
         sentence = " ".join(word.split("::")[0] for word in words)
         return sentence
 
-    def _consistency_check(self, words):
-        #if len(self.last_words) > 15: 
-        #print "Checking consistency: ", len(self.last_words)
-        lw_set = set(self.last_words)
-        w_set = set(words)
-
-        both_set = lw_set & w_set
-        #print "BOTH SET:", both_set
-        ratio = (float(len(both_set)) / float(len(w_set)))
-        #ratio = (float(len(both_set)) / float(15))
-        print "(%s) (%s) %s" % (ratio, both_set, self.word_join(words))
-        return ratio
-        #if (float(len(both_set)) / float(len(w_set))) >= DEFAULT_MIN_OVERLAP_RATIO:
-        #    print "SUCCESS:", words
-        #    return True
-
-
-    def consistency_check(self, words):
-        proper_nouns = ['NNP', 'NNPS' ]
-        nouns = ['NN', 'NNS' ]
-        found_nouns = [ x.split('::')[0].rstrip('s').lower() for x in words if x.split('::')[1] in nouns ]
-        found_pnouns = [ x.split('::')[0].rstrip('s').lower() for x in words if x.split('::')[1] in proper_nouns ]
-        pn_mis_match = [ x for x in found_pnouns if x not in self.last_words and self.last_words]
-        pn_match = [ x for x in found_pnouns if x in self.last_words ]
-        n_match = [ x for x in found_nouns if x in self.last_words ]
-        n_mis_match = [ x for x in found_nouns if x not in self.last_words and self.last_words]
-
-        weight = 0.5
-        
-        for fn in found_nouns:
-            weight += 0.1
-
-        for pn in found_pnouns:
-            weight += 0.1
-
-        for m in pn_match:
-            weight += 1
-            
-        for m in n_match:
-            weight += 0.2
-            
-        for m in pn_mis_match:
-            weight -= 1
-        
-        for m in n_mis_match:
-            weight -= 0.1
-
-        if DEBUG:
-            print "last_words:", self.last_words
-            print "found nouns:", found_nouns
-            print "PN mis-matches:", pn_mis_match
-            print "PN match:", pn_match
-            print "N mis-match:", n_mis_match
-            print "N match:", n_match
-            print "weight:", weight
-
-        return weight
-        #if proper_nouns and not pn_match:
-        #    return 0
-        #else:
-        #    return 1
-
     def test_sentence_output(self, words, intext, max_overlap_ratio, max_overlap_total):
         """
         Given a generated list of words, accept or reject it. This one rejects
@@ -113,7 +51,6 @@ class POSifiedText(markovify.Text):
             if gram_joined in intext:
                 return False
 
-        #ret = self.consistency_check(words)
         return True
 
     def reset_text(self):
@@ -239,15 +176,19 @@ class POSifiedText(markovify.Text):
             sentence = self.word_join(words)
             sentences.append(sentence)
 
-                
-        best_sentence, best_ratio = process.extractOne(self.last_words, sentences)
+        if DEBUG:
+            print "LAST WORDS:", self.last_words
 
-        if best_ratio:
-            if DEBUG:
-                print "BEST RATIO:", best_ratio
-            best_words = best_sentence.split()
-            self.keyword_tags.extend(self.tags(best_words))
-            #best_sentence = self.word_join(best_words)
-            self.last_words.extend(self.keywords(best_words))
+        joined = self.word_join(self.last_words) 
+        best_sentence, best_ratio = process.extractOne(joined, sentences)
+
+        #if best_ratio:
+        if DEBUG:
+            print "BEST RATIO:", best_ratio
+        best_words = best_sentence.split()
+        #self.keyword_tags.extend(self.tags(best_words))
+        #best_sentence = self.word_join(best_words)
+        #self.last_words.extend(self.keywords(best_words))
+        self.last_words.extend(best_words)
         return best_sentence
 
