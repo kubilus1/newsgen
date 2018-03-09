@@ -1,0 +1,6 @@
+markovify
+names
+fuzzywuzzy
+python-Levenshtein
+newspaper3k
+tinydb

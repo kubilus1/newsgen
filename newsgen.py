@@ -7,20 +7,25 @@ import os
 import re
 import sys
 import time
+import json
 import atexit
 import shelve
 import string
 import random
 import urllib
-import urllib2
-import urlparse
+import urllib.request as urllib2
+import urllib.parse as urlparse
 import argparse
 import markovify
 from unidecode import unidecode
 from markovbrain import POSifiedText
 
+import newspaper
 from fuzzywuzzy import fuzz
 from tinydb import TinyDB, Query
+
+import pprint
+import postwp
 
 DEBUG=False
 
@@ -93,9 +98,8 @@ class Newspuller(object):
         self.articles = TinyDB(dbname)
         #self.articles = Query()
 
-    def link_pull(self, url):
-        print "Pulling link: ", url
-       
+
+    def _extract(self, html):
         tag_list = [
             {"id":"content"},
             {"id":"content_area"},
@@ -120,37 +124,20 @@ class Newspuller(object):
         article_title = ""
         alen = 0
 
-        try: 
-            req = urllib2.Request(url)
-            resp = urllib2.urlopen(req)
-            print "urllib2, default"
-        except urllib2.HTTPError, err:
-            print "ERR:", err
-            try:
-                req.add_unredirected_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
-                req.add_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
-                resp = urllib2.urlopen(req)
-                print "urllib2"
-            except urllib2.HTTPError, err:
-                print "ERR:", err
-                resp = urllib.urlopen(url)
-                print "urllib"
-
-        html = resp.read()
         soup = BeautifulSoup(html)
 
         article_html = soup.find('article')
         if article_html:
-            print "Found article!"
+            print("Found article!")
             article = article_html.get_text() 
             alen = len(article)
 
         for t in tag_list:
             article_html = soup.find(**t)
             if article_html:
-                print "Found data for %s" % t
+                print("Found data for %s" % t)
                 if len(article_html.get_text()) > alen:
-                    print "most data so far..."
+                    print("most data so far...")
                     article = article_html.get_text()
                     imgs = article_html.findAll('img')
                     alen = len(article)
@@ -167,9 +154,56 @@ class Newspuller(object):
 
         return (article, article_title, img_srcs)
 
+    def _extractNew(self, html):
+        print("GOOSE extraction...")
+        extr = Goose()
+        data = extr.extract(raw_html=html)
+        article = data.cleaned_text
+        title = data.title
+        img = data.infos.get('image',{}).get('url')
+        return (article, title, [img])
+
+    def _link_pull(self, url):
+        print("Pulling link: ", url)
+       
+        try: 
+            req = urllib2.Request(url)
+            resp = urllib2.urlopen(req)
+            print("urllib2, default")
+        except urllib2.HTTPError as err:
+            print("ERR:", err)
+            try:
+                req.add_unredirected_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
+                req.add_header('User-Agent', 'Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11')
+                resp = urllib2.urlopen(req)
+                print("urllib2")
+            except urllib2.HTTPError as err:
+                print("ERR:", err)
+                resp = urllib.urlopen(url)
+                print("urllib")
+
+        html = resp.read()
+
+        (article, article_title, img_srcs) = self._extract(html)
+
+        return (article, article_title, img_srcs)
+
+    def link_pull(self, url):
+        parser = newspaper.Article(url)
+        try:
+            parser.download()
+            parser.parse()
+        except newspaper.article.ArticleException:
+            return (None, None, [])
+        article = parser.text
+        title = parser.title
+        img = parser.top_image
+
+        return (article, title, [img])
+
 
     def feed_pull(self, feedurl):
-        print "Pulling %s" % feedurl
+        print("Pulling %s" % feedurl)
         feed = feedparser.parse(feedurl)
         article_url = feedurl
         timestamp = time.time()
@@ -177,15 +211,18 @@ class Newspuller(object):
         
         if len(feed.entries) == 0:
             if self.articles.search(Article.article_url == article_url):
-                print "  skipping..."
+                print("  skipping...")
                 return
 
-            print "Not an rss feed, trying to pull link..."
+            print("Not an rss feed, trying to pull link...")
             try:
                 article_text, article_title, img_srcs = self.link_pull(feedurl)
+                if not article_text:
+                    print("  no article data. skipping.")
+                    return
                 for src in img_srcs:
                     article_imgs.append(src)
-                print "    (%s)" % len(article_text)
+                print("    (%s)" % len(article_text))
                 #self.texts[article_title] = article
                 self.articles.insert({
                     "article_title":article_title,
@@ -196,25 +233,25 @@ class Newspuller(object):
                     "imgs":article_imgs
                     })
 
-            except AttributeError, e:
-                print "  no article data. skipping.", e
+            except AttributeError as e:
+                print("  no article data. skipping.", e)
 
         for entry in feed.get('entries'):
             article_title = entry.title
-            print "TITLE:", article_title,
+            print("TITLE:", article_title,)
 
             if self.articles.search(Article.article_title == article_title):
             #if self.texts.get(entry.title) and self.force == False:
             #if hasattr(self.texts, entry.title):
-                print "  skipping..."
+                print("  skipping...")
                 continue
 
             content = entry.get('content')
-            if content:
+            if content and len(content) > 300:
                 soup = BeautifulSoup(content[0].value)
                 article_text = soup.get_text()
                 imgs = soup.findAll('img')
-                print "IMGS:", imgs
+                print("IMGS:", imgs)
                 for img in imgs:
                     src = img.get('src')
                     if src:
@@ -226,13 +263,15 @@ class Newspuller(object):
                 #article, article_title, img_srcs = self.link_pull(url)
                 try:
                     article_text, article_title2, img_srcs = self.link_pull(article_url)
+                    if not article_text:
+                        continue
                     for src in img_srcs:
                         article_imgs.append(src)
-                except AttributeError, e:
-                    print "  no article data. skipping.", e
+                except AttributeError as e:
+                    print("  no article data. skipping.", e)
                     continue
 
-            print "    (%s)" % len(article_text)
+            print("    (%s)" % len(article_text))
             #self.texts[entry.title] = article
             self.articles.insert({
                 "article_title":article_title,
@@ -249,13 +288,18 @@ class ArticleGenerator(object):
 
     models = {}
 
-    def __init__(self, dbname):
+    def __init__(self, dbname, output="text", hosturl=None, username=None,
+            password=None):
         self.articles = TinyDB(dbname)
         self.modelstore = Store('models.db')
+        self.output = output
+        self.hosturl = hosturl
+        self.username = username
+        self.password = password
 
     def _getall_text(self):
         allarts = self.articles.all()
-        print allarts
+        print(allarts)
 
     def _flatten(self, alist):
         return [ y for z in alist for y in z ]
@@ -292,43 +336,124 @@ class ArticleGenerator(object):
 
     def tagline(self, seed=None, search=None, search_key='article_text'):
         text_model = self.get_model('article_text', search, search_key)
-        print text_model.make_sentence(maxlen=90, tries=20)
-    
-    def article(self, seed=None, search=None, search_key='article_text'):
+        print(text_model.make_sentence(maxlen=90, tries=20))
+  
+
+    def title(self, seed=None, search=None, search_key='article_text'):
         title_model = self.get_model('article_title', search, search_key)
         text_model = self.get_model('article_text', search, search_key)
         combo_model = markovify.combine(
             [ title_model, text_model ],
-            [ 1, 1 ]
+            [ 100, 1 ]
         )
         
         if seed:
             combo_model.seed(seed)
 
         title = string.capwords(
-            combo_model.make_sentence(maxlen=75, tries=50)
+            combo_model.make_sentence(maxlen=120, tries=100)
+        )
+        print(title)
+
+
+    def sentences(self, num=3, seed=None, search=None, search_key='article_text'):
+        text_model = self.get_model('article_text', search, search_key)
+        if seed:
+            text_model.seed(seed)
+
+        resp = ""
+        for i in range(num):
+            resp += "%s " % text_model.make_sentence(tries=100)
+        
+        print(resp)
+
+
+    def article(self, seed=None, search=None, search_key='article_text'):
+        title_model = self.get_model('article_title', search, search_key)
+        text_model = self.get_model('article_text', search, search_key)
+        combo_model = markovify.combine(
+            [ title_model, text_model ],
+            [ 100, 1 ]
+        )
+        
+        if seed:
+            combo_model.seed(seed)
+
+        article_title = string.capwords(
+            combo_model.make_sentence(maxlen=120, tries=50)
         )
 
         text_model.last_words = combo_model.last_words
 
-        print
-        print self.img()
-        print
-        print title
-        print
-        print
+
+        article_img = self.img()
+        article_text = ""
         for i in range(random.randrange(3,7)):
-            print
-            print self.paragraph(text_model)
+            article_text += "\n%s\n" % self.paragraph(text_model)
 
+        newsart = newspaper.Article('foo')
+        newsart.text = article_text
+        newsart.title = article_title
 
+        newsart.download_state = 2
+        newsart.is_parsed = True
+        newsart.nlp()
+        article_keywords = newsart.keywords
+
+        ktags = combo_model.keyword_tags
+        ktags_sorted = sorted(ktags, key = ktags.count, reverse=True)
+        unique_ktags = [
+            x for i, x in enumerate(ktags_sorted) if x not in ktags_sorted[0:i]
+        ]
+
+        if self.output == "json":
+            payload = {
+                "title":article_title,
+                "content":article_text,
+                "excerpt":newsart.summary,
+                "tags":article_keywords
+            }
+            print(json.dumps(payload).__repr__())
+        else:
+            print()
+            print(article_img)
+            print()
+            print(article_title)
+            print()
+            print()
+            print(article_text)
+            print()
+            print("KEYWORDS: %s" % ','.join(article_keywords))
+
+        if self.hosturl:
+            print("HOSTURL detected, posting article")
+            wpp = postwp.WPPoster(
+                self.hosturl,
+                self.username,
+                self.password
+            )
+            ret = wpp.post(
+                article_title,
+                article_text,
+                "%s..." % " ".join(article_text.split()[:30]),
+                unique_ktags[:10],
+                imgurl=article_img
+            )
+            pprint.pprint(ret)
+            print("POSTED draft")
+            print(unique_ktags)
+            print(article_keywords)
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-H', "--hosturl", help="Wordpress host URL")
+    parser.add_argument('-u', "--username")
+    parser.add_argument('-p', "--password")
     parser.add_argument("-r", "--rss_file")
     parser.add_argument("-d", "--dbfile", default="argen.db")
     parser.add_argument("-f", "--force", action="store_true")
+    parser.add_argument("-o", "--output", default="text", choices=["text", "json"])
     parser.add_argument("command", type=str, default="article", help="Command to execute")
     parser.add_argument("search", type=str, nargs='?', default=None, help="Article search string")
     args = parser.parse_args()
@@ -342,12 +467,19 @@ if __name__ == "__main__":
                 newspull.feed_pull(a)
         sys.exit(0)
 
-    artgen = ArticleGenerator(args.dbfile)
+    artgen = ArticleGenerator(
+        args.dbfile,
+        output=args.output,
+        hosturl=args.hosturl,
+        username=args.username,
+        password=args.password
+    )
     
 
-    if args.command == 'article':
-        print "SEARCH:", args.search
-        artgen.article(seed=args.search, search=args.search)
+    if args.command in ['article','title', 'sentences']:
+        #print("SEARCH:", args.search)
+        meth = getattr(artgen, args.command)
+        meth(seed=args.search, search=args.search)
         sys.exit(0)
 
     if hasattr(artgen, args.command):
@@ -355,7 +487,7 @@ if __name__ == "__main__":
         if callable(meth):
             ret = meth()
             if ret:
-                print ret
+                print(ret)
     else:
         raise argparse.ArgumentTypeError("no command " + args.command)
 

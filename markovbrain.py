@@ -54,14 +54,14 @@ class POSifiedText(markovify.Text):
         return True
 
     def reset_text(self):
-        print "Resetting last_words..."
+        print("Resetting last_words...")
         self.last_words = []
         self.keyword_tags = []
         random.seed()
 
     
     def tags(self, words):
-        words = [ w.split('::')[0].rstrip('s').lower() for w in words if w.split('::')[1] in ['NNP','NNPS' ]]
+        words = [ w.split('::')[0].lower() for w in words if w.split('::')[1] in ['NNP','NNPS' ] and w.split('::')[0].isalpha()]
         return words
 
     def keywords(self, words):
@@ -113,7 +113,7 @@ class POSifiedText(markovify.Text):
         # Sentence shouldn't contain problematic characters
         if re.search(reject_pat, decoded):
             if DEBUG:
-                print "REJECTING:", decoded
+                print("REJECTING:", decoded)
             return False
         
         return True
@@ -137,13 +137,13 @@ class POSifiedText(markovify.Text):
         tries = kwargs.get('tries', DEFAULT_TRIES)
         mor = kwargs.get('max_overlap_ratio', DEFAULT_MAX_OVERLAP_RATIO)
         mot = kwargs.get('max_overlap_total', DEFAULT_MAX_OVERLAP_TOTAL)
-        maxlen = kwargs.get('maxlen', 0)
-    
+        maxlen = kwargs.get('maxlen', 9999)
+        
         if not init_state and self.last_state:
-            print "last state:", self.last_state
+            print("last state:", self.last_state)
             init_state = self.last_state
         #else:
-        #    print "no last state"
+        #    print("no last state")
 
         sentence = None
         words = []
@@ -164,8 +164,7 @@ class POSifiedText(markovify.Text):
             else:
                 prefix = []
             words = prefix + self.chain.walk(init_state)
-        
-
+       
             # Make sure the sentence is not too similar to original corpus
             if not self.test_sentence_output(words, self.rejoined_text, mor, mot):
                 continue
@@ -174,19 +173,23 @@ class POSifiedText(markovify.Text):
                 continue
             
             sentence = self.word_join(words)
+
+            if len(sentence) > maxlen:
+                continue
+
             sentences.append(sentence)
 
         if DEBUG:
-            print "LAST WORDS:", self.last_words
+            print("LAST WORDS:", self.last_words)
 
         joined = self.word_join(self.last_words) 
         best_sentence, best_ratio = process.extractOne(joined, sentences)
 
         #if best_ratio:
         if DEBUG:
-            print "BEST RATIO:", best_ratio
+            print("BEST RATIO:", best_ratio)
         best_words = best_sentence.split()
-        #self.keyword_tags.extend(self.tags(best_words))
+        self.keyword_tags.extend(self.tags(self.word_split(best_sentence)))
         #best_sentence = self.word_join(best_words)
         #self.last_words.extend(self.keywords(best_words))
         self.last_words.extend(best_words)
