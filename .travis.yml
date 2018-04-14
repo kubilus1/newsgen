@@ -5,10 +5,20 @@ cache:
   pip: true
   directories:
     - ./data
+    - /home/travis/nltk_data
 install:
   - pip install -r requirements.txt
-script:
   - mkdir -p ./data
-  - python3 ./newsgen.py -d ./data/$NEWSTYPE.tdb -r $NEWSTYPE.txt pull
   - python3 -m nltk.downloader popular
-  - python3 ./newsgen.py -d ./data/$NEWSTYPE.tdb -r $NEWSTYPE.txt -H $WPHOST -u $WPUSER -p "$WPPASS" article  
+
+jobs:
+  include:
+  - stage: pull
+    script:
+      - python3 ./newsgen.py -d ./data/right.tdb -r right.txt pull
+      - python3 ./newsgen.py -d ./data/left.tdb -r left.txt pull
+  - stage: publish
+    script:
+      - python3 ./newsgen.py -d ./data/right.tdb -r right.txt -H $RIGHTHOST -u $WPUSER -p "$WPPASS" article  
+      - python3 ./newsgen.py -d ./data/left.tdb -r left.txt -H $LEFTHOST -u $WPUSER -p "$WPPASS" article  
+
