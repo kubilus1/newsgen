@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import feedparser
 from bs4 import BeautifulSoup
@@ -189,7 +189,7 @@ class Newspuller(object):
         return (article, article_title, img_srcs)
 
     def link_pull(self, url):
-        parser = newspaper.Article(url)
+        parser = newspaper.Article(url, request_timeout=10)
         try:
             parser.download()
             parser.parse()
