@@ -1,9 +1,14 @@
 language: python
 python:
   - "3.5"
+cache:
+  pip: true
+  directories:
+    - ./data
 install:
   - pip install -r requirements.txt
 script:
-  - python3 ./newsgen.py -d right.tdb -r right.txt pull
+  - mkdir -p ./data
+  - python3 ./newsgen.py -d ./data/$NEWSTYPE.tdb -r $NEWSTYPE.txt pull
   - python3 -m nltk.downloader popular
-  - python3 ./newsgen.py -d right.tdb -r right.txt article  
+  - python3 ./newsgen.py -d ./data/$NEWSTYPE.tdb -r $NEWSTYPE.txt -H $WPHOST -u $WPUSER -p "$WPPASS" article  
