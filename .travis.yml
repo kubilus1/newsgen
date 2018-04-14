@@ -15,8 +15,8 @@ jobs:
   include:
   - stage: pull
     script:
-      - python3 ./newsgen.py -d ./data/right.tdb -r right.txt pull
-      - python3 ./newsgen.py -d ./data/left.tdb -r left.txt pull
+      - travis_wait 30 python3 ./newsgen.py -d ./data/right.tdb -r right.txt pull
+      - travis_wait 30 python3 ./newsgen.py -d ./data/left.tdb -r left.txt pull
   - stage: publish
     script:
       - python3 ./newsgen.py -d ./data/right.tdb -r right.txt -H $RIGHTHOST -u $WPUSER -p "$WPPASS" article  
