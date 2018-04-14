@@ -93,16 +93,21 @@ class WPPoster(object):
 
         contype = retmsg.get_content_type()
 
-        retjson = dourl(
-            "%s/wp-json/wp/v2/media" % self.url,
-            'POST',
-            data,
-            {
-                "Content-Type": contype,
-                "Authorization": self.auth,
-                "Content-Disposition": "attachment; filename=%s" % contype.replace("/",".")
-            }
-        )
+        try:
+            retjson = dourl(
+                "%s/wp-json/wp/v2/media" % self.url,
+                'POST',
+                data,
+                {
+                    "Content-Type": contype,
+                    "Authorization": self.auth,
+                    "Content-Disposition": "attachment; filename=%s" % contype.replace("/",".")
+                }
+            )
+        except urllib.error.HTTPError:
+            print("Could not upload image: %s" % imgurl)
+            return None
+
         ret = json.loads(retjson)
         return ret.get('id')
 
