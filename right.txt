@@ -24,11 +24,9 @@ http://allenwestrepublic.com/feed/
 http://projectcamelotportal.com/category/guest-blogs/feed
 http://projectcamelotportal.com/category/kerrys-blog/feed
 http://www.rightwingwatch.org/feed/
-http://genfringe.com/feed
 #http://thelibertyalliance.net/feed
 http://politicaloutcast.com/feed/
 http://politicalillusionsexposed.com/feed/
-http://pitgrit.com/feed
 http://rickgreen.com/feed/
 http://reviveusa.com/feed/
 http://unhyphenatedamerica.org/feed/
