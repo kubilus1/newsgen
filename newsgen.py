@@ -193,7 +193,7 @@ class Newspuller(object):
         try:
             parser.download()
             parser.parse()
-        except newspaper.article.ArticleException:
+        except (newspaper.article.ArticleException, ValueError):
             return (None, None, [])
         article = parser.text
         title = parser.title
