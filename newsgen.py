@@ -237,7 +237,7 @@ class Newspuller(object):
                 print("  no article data. skipping.", e)
 
         for entry in feed.get('entries'):
-            article_title = entry.title
+            article_title = entry.get('title')
             print("TITLE:", article_title,)
 
             if self.articles.search(Article.article_title == article_title):
