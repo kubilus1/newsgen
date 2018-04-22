@@ -41,7 +41,11 @@ class WPPoster(object):
         retjson = dourl(
             "%s/wp-json/wp/v2/users?roles=author" % (
                 self.url
-            )
+            ),
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": self.auth
+            }
         )
         ret = json.loads(retjson)
         return ret
