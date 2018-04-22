@@ -39,7 +39,9 @@ class WPPoster(object):
 
     def get_authors(self):
         retjson = dourl(
-            "%s/wp-json/wp/v2/users?roles=author"
+            "%s/wp-json/wp/v2/users?roles=author" % (
+                self.url
+            )
         )
         ret = json.loads(retjson)
         return ret
