@@ -435,12 +435,19 @@ class ArticleGenerator(object):
                 self.username,
                 self.password
             )
+
+            for i in range(5):
+                imgid = wpp.upload_img(article_img)
+                if imgid:
+                    break
+                article_img = self.img()
+
             ret = wpp.post(
                 article_title,
                 article_text,
                 "%s..." % " ".join(article_text.split()[:30]),
                 unique_ktags[:10],
-                imgurl=article_img
+                imgid=imgid
             )
             pprint.pprint(ret)
             print("POSTED draft")

@@ -127,7 +127,16 @@ class WPPoster(object):
         return ret.get('id')
 
 
-    def post(self, title, content, excerpt, tags=None, author=None, imgurl=None):
+    def post(
+        self, 
+        title, 
+        content, 
+        excerpt, 
+        tags=None, 
+        author=None,
+        imgurl=None, 
+        imgid=None
+    ):
 
         authors = self.get_authors()
         author = random.choice(authors)
@@ -148,6 +157,8 @@ class WPPoster(object):
 
         if imgurl:
             imgid = self.upload_img(imgurl)
+    
+        if imgid:
             payload.update({"featured_media":imgid})
 
         ret = dourl(
