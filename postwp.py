@@ -2,6 +2,7 @@
 import json
 import urllib.request as urllib2
 import urllib.error
+import random
 import base64
 import argparse
 
@@ -34,6 +35,14 @@ class WPPoster(object):
         credentials = ('%s:%s' % (user, password))
         encoded_credentials = base64.b64encode(credentials.encode('ascii'))
         self.auth = 'Basic %s' % encoded_credentials.decode("ascii")
+
+
+    def get_authors(self):
+        retjson = dourl(
+            "%s/wp-json/wp/v2/users?roles=author"
+        )
+        ret = json.loads(retjson)
+        return ret
 
 
     def get_tagid(self, tag):
@@ -113,11 +122,18 @@ class WPPoster(object):
 
 
     def post(self, title, content, excerpt, tags=None, author=None, imgurl=None):
+
+        authors = self.get_authors()
+        author = random.choice(authors)
         
+        publish_status = "draft"
+
         payload = {
             "title":title,
             "content":content,
-            "excerpt":excerpt
+            "excerpt":excerpt,
+            "author":author.get('id'),
+            "status":publish_status
         }
 
         if tags:
