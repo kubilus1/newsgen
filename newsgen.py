@@ -305,7 +305,7 @@ class ArticleGenerator(object):
         print(allarts)
 
     def _flatten(self, alist):
-        return [ y for z in alist for y in z ]
+        return [ y for z in alist for y in z if y ]
 
     def get_imgs(self, search=None):
         return self._flatten(
