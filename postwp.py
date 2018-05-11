@@ -96,6 +96,10 @@ class WPPoster(object):
 
 
     def upload_img(self, imgurl):
+        if not imgurl:
+            print ("imgurl cannot be empty")
+            return None
+        
         tempfile = "/tmp/img"
         try:
             retfile, retmsg = urllib2.urlretrieve(imgurl, tempfile)
