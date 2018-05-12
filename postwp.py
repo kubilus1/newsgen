@@ -145,7 +145,8 @@ class WPPoster(object):
         authors = self.get_authors()
         author = random.choice(authors)
         
-        publish_status = "draft"
+        #publish_status = "draft"
+        publish_status = "publish"
 
         payload = {
             "title":title,
