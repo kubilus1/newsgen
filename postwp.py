@@ -9,7 +9,7 @@ import argparse
 def dourl(url, method='GET', data=None, headers={}, timeout=30):
     print(url)
     print(data)
-    print(headers)
+    #print(headers)
 
     req = urllib2.Request(url, data, headers=headers)
     req.get_method = lambda: method
@@ -145,8 +145,8 @@ class WPPoster(object):
         authors = self.get_authors()
         author = random.choice(authors)
         
-        #publish_status = "draft"
-        publish_status = "publish"
+        publish_status = "draft"
+        #publish_status = "publish"
 
         payload = {
             "title":title,
@@ -166,8 +166,26 @@ class WPPoster(object):
         if imgid:
             payload.update({"featured_media":imgid})
 
+        # First make the draft
         ret = dourl(
             "%s/wp-json/wp/v2/posts" % self.url,
+            'POST',
+            json.dumps(payload).encode('utf8'),
+            {
+                "Content-Type": "application/json",
+                "Authorization": self.auth
+            }
+        )
+
+        payload = {
+            "status":"publish"
+        }
+        # Then publish
+        dourl(
+            "%s/wp-json/wp/v2/posts/%s" % (
+                self.url,
+                ret.get('id')
+            ),
             'POST',
             json.dumps(payload).encode('utf8'),
             {
