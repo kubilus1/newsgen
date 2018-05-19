@@ -167,7 +167,7 @@ class WPPoster(object):
             payload.update({"featured_media":imgid})
 
         # First make the draft
-        ret = dourl(
+        ret_json = dourl(
             "%s/wp-json/wp/v2/posts" % self.url,
             'POST',
             json.dumps(payload).encode('utf8'),
@@ -176,6 +176,7 @@ class WPPoster(object):
                 "Authorization": self.auth
             }
         )
+        ret = json.loads(ret_json)
 
         payload = {
             "status":"publish"
@@ -194,7 +195,7 @@ class WPPoster(object):
             }
         )
         #return ret
-        return json.loads(ret)
+        return ret
 
 
 if __name__ == "__main__":
