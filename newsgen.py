@@ -354,7 +354,7 @@ class ArticleGenerator(object):
             combo_model.seed(seed)
 
         title = string.capwords(
-            combo_model.make_sentence(maxlen=120, tries=100)
+            combo_model.make_sentence(maxlen=120, tries=100).replace('"','')
         )
         print(title)
 
