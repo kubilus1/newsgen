@@ -342,21 +342,30 @@ class ArticleGenerator(object):
         print(text_model.make_sentence(maxlen=90, tries=20))
   
 
-    def title(self, seed=None, search=None, search_key='article_text'):
-        title_model = self.get_model('article_title', search, search_key)
-        text_model = self.get_model('article_text', search, search_key)
-        combo_model = markovify.combine(
-            [ title_model, text_model ],
-            [ 100, 1 ]
-        )
-        
-        if seed:
-            combo_model.seed(seed)
+    def title(
+            self, 
+            seed=None, 
+            search=None, 
+            search_key='article_text',
+            model=None):
 
-        title = string.capwords(
-            combo_model.make_sentence(maxlen=120, tries=100).replace('"','')
-        )
-        print(title)
+        if not model:
+            title_model = self.get_model('article_title', search, search_key)
+            text_model = self.get_model('article_text', search, search_key)
+            model = markovify.combine(
+                [ title_model, text_model ],
+                [ 100, 1 ]
+            )
+            
+            if seed:
+                model.seed(seed)
+
+        raw_title = model.make_sentence(maxlen=120, tries=50)
+        ascii_title = ''.join(
+            [x for x in raw_title if ord(x) < 128]).replace('"', '')
+        
+        title = string.capwords(ascii_title)
+        return title
 
 
     def sentences(self, num=3, seed=None, search=None, search_key='article_text'):
@@ -382,12 +391,8 @@ class ArticleGenerator(object):
         if seed:
             combo_model.seed(seed)
 
-        article_title = string.capwords(
-            combo_model.make_sentence(maxlen=120, tries=50)
-        )
-
+        article_title = self.title(model=combo_model)
         text_model.last_words = combo_model.last_words
-
 
         article_img = self.img()
         article_text = ""
@@ -453,6 +458,7 @@ class ArticleGenerator(object):
             print("POSTED draft")
             print(unique_ktags)
             print(article_keywords)
+
 
 if __name__ == "__main__":
 
