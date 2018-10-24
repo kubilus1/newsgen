@@ -6,9 +6,12 @@ import random
 import base64
 import argparse
 
+DEBUG=False
+
 def dourl(url, method='GET', data=None, headers={}, timeout=30):
     print(url)
-    print(data)
+    if DEBUG:
+        print(data)
     #print(headers)
 
     req = urllib2.Request(url, data, headers=headers)
