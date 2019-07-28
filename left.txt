@@ -32,3 +32,7 @@ https://wonkette.com/feed?paged=2
 https://wonkette.com/feed?paged=3
 https://wonkette.com/feed?paged=4
 https://wonkette.com/feed?paged=5
+https://www.aljazeera.com/xml/rss/all.xml
+https://www.democracynow.org/democracynow.rss
+http://www.newyorker.com/feed/news
+https://www.newyorker.com/feed/news/daily-comment

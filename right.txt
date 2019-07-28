@@ -31,3 +31,4 @@ http://rickgreen.com/feed/
 http://reviveusa.com/feed/
 http://unhyphenatedamerica.org/feed/
 http://usherald.com/feed/
+https://feeds.foxnews.com/foxnews/opinion
