@@ -8,7 +8,7 @@ import argparse
 
 DEBUG=False
 
-def dourl(url, method='GET', data=None, headers={}, timeout=30):
+def dourl(url, method='GET', data=None, headers={}, timeout=120):
     print(url)
     if DEBUG:
         print(data)
