@@ -13,9 +13,11 @@ install:
 
 jobs:
   include:
-  - stage: pull
+  - stage: pull right
     script:
       - python3 ./newsgen.py -d ./data/right.tdb -r right.txt pull
+  - stage: pull left
+    script:
       - python3 ./newsgen.py -d ./data/left.tdb -r left.txt pull
   - stage: publish
     script:
