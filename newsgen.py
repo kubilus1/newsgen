@@ -13,9 +13,11 @@ import shelve
 import string
 import random
 import urllib
+import datetime
 import urllib.request as urllib2
 import urllib.parse as urlparse
 import argparse
+
 import markovify
 from unidecode import unidecode
 from markovbrain import POSifiedText
@@ -237,7 +239,7 @@ class Newspuller(object):
                 print("  no article data. skipping.", e)
 
         for entry in feed.get('entries'):
-            article_title = entry.get('title')
+            article_title = unidecode(entry.get('title'))
             if not article_title:
                 continue
 
@@ -291,11 +293,12 @@ class ArticleGenerator(object):
 
     models = {}
 
-    def __init__(self, dbname, output="text", hosturl=None, username=None,
+    def __init__(self, dbname, output="text", outdir=None, hosturl=None, username=None,
             password=None):
         self.articles = TinyDB(dbname)
         self.modelstore = Store('models.db')
         self.output = output
+        self.outdir = outdir
         self.hosturl = hosturl
         self.username = username
         self.password = password
@@ -399,6 +402,9 @@ class ArticleGenerator(object):
         for i in range(random.randrange(3,7)):
             article_text += "\n%s\n" % self.paragraph(text_model)
 
+
+        article_date = datetime.datetime.now()
+
         newsart = newspaper.Article('foo')
         newsart.text = article_text
         newsart.title = article_title
@@ -414,6 +420,40 @@ class ArticleGenerator(object):
             x for i, x in enumerate(ktags_sorted) if x not in ktags_sorted[0:i]
         ]
 
+
+        if self.outdir:
+            filename = "%s.md" % re.sub('\W+', '-', article_title.lower().strip())
+            
+            with open(os.path.join(self.outdir, filename), 'w') as h:
+                sys.stdout = h
+                self._print_article(
+                    article_title,
+                    article_text,
+                    newsart.summary,
+                    article_keywords,
+                    article_date,
+                    article_img
+                )
+        else:
+            self._print_article(
+                article_title,
+                article_text,
+                newsart.summary,
+                article_keywords,
+                article_date,
+                article_img
+            )
+
+    def _print_article(
+            self,
+            article_title,
+            article_text,
+            article_summary,
+            article_keywords,
+            article_date,
+            article_img
+        ):
+
         if self.output == "json":
             payload = {
                 "title":article_title,
@@ -422,6 +462,14 @@ class ArticleGenerator(object):
                 "tags":article_keywords
             }
             print(json.dumps(payload).__repr__())
+        elif self.output == "markdown":
+            print('---')
+            print('title: %s' % article_title)
+            print('featured_image: %s' % article_img)
+            print('tags: %s' % article_keywords)
+            print('date: %s' % article_date.strftime('%d/%m/%Y'))
+            print('---')
+            print(unidecode(article_text))
         else:
             print()
             print(article_img)
@@ -469,7 +517,8 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--rss_file")
     parser.add_argument("-d", "--dbfile", default="argen.db")
     parser.add_argument("-f", "--force", action="store_true")
-    parser.add_argument("-o", "--output", default="text", choices=["text", "json"])
+    parser.add_argument("-o", "--output", default="text", choices=["text", "json", "markdown"])
+    parser.add_argument("-O", "--outdir", default=None, help="Output directory.")
     parser.add_argument("command", type=str, default="article", help="Command to execute")
     parser.add_argument("search", type=str, nargs='?', default=None, help="Article search string")
     args = parser.parse_args()
@@ -486,6 +535,7 @@ if __name__ == "__main__":
     artgen = ArticleGenerator(
         args.dbfile,
         output=args.output,
+        outdir=args.outdir,
         hosturl=args.hosturl,
         username=args.username,
         password=args.password
