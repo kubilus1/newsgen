@@ -8,10 +8,9 @@ on:
 
 jobs:
 
-  env:
-     BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
-       
   build:
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
 
     runs-on: ubuntu-latest
 
