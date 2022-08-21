@@ -4,15 +4,29 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+#    branches: [ "master" ]
 
 jobs:
 
   build:
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      run: docker build . --file Dockerfile --tag newsgen:${{ env.BRANCH_NAME }}
+    - name: Login to registry
+      run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u kubilus1 --password-stdin
+    - name: Push branch
+      run: |
+        docker tag newsgen:${{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:${{ env.BRANCH_NAME }}
+        docker push ghcr.io/kubilus1/newsgen:${{ env.BRANCH_NAME }}
+      if: github.ref != 'refs/heads/master'
+    - name: Push if master
+      run: |
+        docker tag newsgen:${{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:latest
+        docker push ghcr.io/kubilus1/newsgen:latest
+      if: github.ref == 'refs/heads/master'

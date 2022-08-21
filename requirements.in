@@ -1,0 +1,8 @@
+markovify<=0.8.1
+names
+fuzzywuzzy
+python-Levenshtein
+newspaper3k
+tinydb
+#gpt-2-simple
+#tensorflow<=1.15
