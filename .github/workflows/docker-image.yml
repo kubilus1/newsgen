@@ -20,11 +20,11 @@ jobs:
       run: docker build . --file Dockerfile --tag newsgen:${{ env.BRANCH_NAME }}
     - name: Push branch
       run: |
-        docker tag newsgen:{{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:${{ env.BRANCH_NAME }}
+        docker tag newsgen:${{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:${{ env.BRANCH_NAME }}
         docker push ghcr.io/kubilus1/newsgen:${{ env.BRANCH_NAME }}
       if: github.ref != 'refs/heads/master'
     - name: Push if master
       run: |
-        docker tag newsgen:{{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:latest
+        docker tag newsgen:${{ env.BRANCH_NAME }} ghcr.io/kubilus1/newsgen:latest
         docker push ghcr.io/kubilus1/newsgen:latest
       if: github.ref == 'refs/heads/master'
