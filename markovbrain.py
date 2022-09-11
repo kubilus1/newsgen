@@ -1,4 +1,6 @@
 import re
+import string
+
 import nltk
 import names
 import random
@@ -15,6 +17,107 @@ DEFAULT_TRIES = 40
 
 DEFAULT_MIN_OVERLAP_RATIO = 0.3
 DEFAULT_MIN_OVERLAP_TOTAL = 15
+
+
+class MKVBrain(object):
+    
+    models = {}
+    in_text = ''
+
+    def __init__(self, in_text=""):
+        self.in_text = in_text
+
+    def build_model(self, seed, search, key):
+        model = self.models.get(key) 
+        if not model:
+            model = POSifiedText(self.in_text)
+            self.models[key] = model
+
+    def get_model(self, key, search=None, search_key='article_text'):
+        model = self.models.get(key) 
+        return model
+
+    def paragraph(self, model):
+        outstr = ""
+        for i in range(random.randrange(3,7)):
+            outstr = "%s %s" % (
+                outstr,
+                model.make_sentence(tries=100)
+            )
+        return outstr
+
+
+    def tagline(self, seed=None, search=None, search_key='article_text'):
+        text_model = self.get_model('article_text', search, search_key)
+        print(text_model.make_sentence(maxlen=90, tries=20))
+  
+
+    def title(
+            self, 
+            seed=None, 
+            search=None, 
+            search_key='article_text',
+            model=None):
+
+        if not model:
+            title_model = self.get_model('article_title', search, search_key)
+            text_model = self.get_model('article_text', search, search_key)
+            model = markovify.combine(
+                [ title_model, text_model ],
+                [ 100, 1 ]
+            )
+            
+            if seed:
+                model.seed(seed)
+
+        raw_title = model.make_sentence(maxlen=120, tries=50)
+        ascii_title = ''.join(
+            [x for x in raw_title if ord(x) < 128]).replace('"', '')
+        
+        title = string.capwords(ascii_title)
+        return title
+
+
+    def sentences(self, num=3, seed=None, search=None, search_key='article_text'):
+        text_model = self.get_model('article_text', search, search_key)
+        if seed:
+            text_model.seed(seed)
+
+        resp = ""
+        for i in range(num):
+            resp += "%s " % text_model.make_sentence(tries=100)
+        
+        print(resp)
+
+
+    def get_article_text(self, seed, search, search_key):
+        title_model = self.get_model('article_title', search, search_key)
+        text_model = self.get_model('article_text', search, search_key)
+        combo_model = markovify.combine(
+            [ title_model, text_model ],
+            [ 100, 1 ]
+        )
+        
+        if seed:
+            combo_model.seed(seed)
+
+        article_title = self.title(model=combo_model)
+        text_model.last_words = combo_model.last_words
+        
+        article_title = self.title(model=combo_model)
+        
+        article_text = ""
+        for i in range(random.randrange(3,7)):
+            article_text += "\n%s\n" % self.paragraph(text_model)
+
+        # ktags = combo_model.keyword_tags
+        # ktags_sorted = sorted(ktags, key = ktags.count, reverse=True)
+        # unique_ktags = [
+        #     x for i, x in enumerate(ktags_sorted) if x not in ktags_sorted[0:i]
+        # ]
+
+        return article_title, article_text
+    
 
 class POSifiedText(markovify.Text):
    

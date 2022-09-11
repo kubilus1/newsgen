@@ -20,7 +20,9 @@ import argparse
 
 import markovify
 from unidecode import unidecode
-from markovbrain import POSifiedText
+
+from markovbrain import MKVBrain
+from gpt2brain import GPT2Brain
 
 import newspaper
 from fuzzywuzzy import fuzz
@@ -289,23 +291,34 @@ class Newspuller(object):
         print
 
 
+BRAINS={
+    "markov":MKVBrain,
+    "gpt2":GPT2Brain
+}
+
 class ArticleGenerator(object):
 
     models = {}
+    brain = None
 
-    def __init__(self, dbname, output="text", outdir=None, hosturl=None, username=None,
-            password=None):
+    def __init__(self, 
+            dbname, 
+            brain,
+            output="text", 
+            outdir=None, 
+            hosturl=None, 
+            username=None,
+            password=None
+        ):
+
+        self.brain_class = BRAINS.get(brain)
         self.articles = TinyDB(dbname)
-        self.modelstore = Store('models.db')
         self.output = output
         self.outdir = outdir
         self.hosturl = hosturl
         self.username = username
         self.password = password
 
-    def _getall_text(self):
-        allarts = self.articles.all()
-        print(allarts)
 
     def _flatten(self, alist):
         return [ y for z in alist for y in z if y ]
@@ -315,111 +328,68 @@ class ArticleGenerator(object):
             [ x.get('imgs') for x in self.articles.search(Article.imgs.exists())]
         )
 
-    def get_model(self, key, search=None, search_key='article_text'):
-        model = self.models.get(key) 
-        if not model:
-            text = searchdb(
-                self.articles, search, search_key=search_key, limit=1000000
-            )
-            text += ". "
-            model = POSifiedText(text)
-            #self.models[key]= model
-        return model
-
-    def paragraph(self, model):
-        outstr = ""
-        for i in range(random.randrange(3,7)):
-            outstr = "%s %s" % (
-                outstr,
-                model.make_sentence(tries=100)
-            )
-        return outstr
-
     def img(self):
         img_list = self.get_imgs()
-        img = img_list[random.randrange(len(img_list))]
+        if img_list:
+            img = img_list[random.randrange(len(img_list))]
+        else:
+            img = None
         return img
 
-    def tagline(self, seed=None, search=None, search_key='article_text'):
-        text_model = self.get_model('article_text', search, search_key)
-        print(text_model.make_sentence(maxlen=90, tries=20))
-  
-
-    def title(
-            self, 
-            seed=None, 
-            search=None, 
-            search_key='article_text',
-            model=None):
-
-        if not model:
-            title_model = self.get_model('article_title', search, search_key)
-            text_model = self.get_model('article_text', search, search_key)
-            model = markovify.combine(
-                [ title_model, text_model ],
-                [ 100, 1 ]
-            )
-            
-            if seed:
-                model.seed(seed)
-
-        raw_title = model.make_sentence(maxlen=120, tries=50)
-        ascii_title = ''.join(
-            [x for x in raw_title if ord(x) < 128]).replace('"', '')
-        
-        title = string.capwords(ascii_title)
-        return title
-
-
-    def sentences(self, num=3, seed=None, search=None, search_key='article_text'):
-        text_model = self.get_model('article_text', search, search_key)
-        if seed:
-            text_model.seed(seed)
-
-        resp = ""
-        for i in range(num):
-            resp += "%s " % text_model.make_sentence(tries=100)
-        
-        print(resp)
-
-
-    def article(self, seed=None, search=None, search_key='article_text'):
-        title_model = self.get_model('article_title', search, search_key)
-        text_model = self.get_model('article_text', search, search_key)
-        combo_model = markovify.combine(
-            [ title_model, text_model ],
-            [ 100, 1 ]
-        )
-        
-        if seed:
-            combo_model.seed(seed)
-
-        article_title = self.title(model=combo_model)
-        text_model.last_words = combo_model.last_words
-
-        article_img = self.img()
-        article_text = ""
-        for i in range(random.randrange(3,7)):
-            article_text += "\n%s\n" % self.paragraph(text_model)
-
-
-        article_date = datetime.datetime.now()
-
+    def _get_tags(self, title, text):
         newsart = newspaper.Article('foo')
-        newsart.text = article_text
-        newsart.title = article_title
+        newsart.text = text
+        newsart.title = title
 
         newsart.download_state = 2
         newsart.is_parsed = True
         newsart.nlp()
-        article_keywords = newsart.keywords
+        keywords = newsart.keywords
+        summary = newsart.summary
 
-        ktags = combo_model.keyword_tags
-        ktags_sorted = sorted(ktags, key = ktags.count, reverse=True)
-        unique_ktags = [
-            x for i, x in enumerate(ktags_sorted) if x not in ktags_sorted[0:i]
-        ]
+        print("TITLE: %s" % newsart.title)
+        return keywords, summary
 
+    def _get_article_texts(self):
+        #text = searchdb(
+        #    self.articles, None, search_key=search_key, limit=1000
+        #)
+        #text += ". "
+
+        text = ""
+        for item in self.articles:
+            text += "<|startoftext|>\n"
+            text += "title: %s\n\n" % item.get('article_title')
+            text += item.get('article_text')
+            text += "\n<|endoftext|>\n"
+        #print(text)
+        return text
+
+    def _find_text(self, seed, search, search_key='article_text'):
+        text = searchdb(
+            self.articles, search, search_key=search_key, limit=1000000
+        )
+        text += ". "
+        return text
+
+    def build_model(self, seed=None, search=None, search_key='article_text'):
+        if self.brain is None:
+            self.brain = self.brain_class()
+                
+        self.brain.build_model(
+            #self._find_text(seed, search, search_key),
+            self._get_article_texts(),
+            search_key
+        )
+
+    def article(self, seed=None, search=None, search_key='article_text'):
+        if self.brain is None:
+            self.brain = self.brain_class()
+
+        article_title, article_text = self.brain.get_article_text()
+        article_img = self.img()
+        article_date = datetime.datetime.now()
+        article_keywords, article_summary = self._get_tags(article_title, article_text)
 
         if self.outdir:
             filename = "%s.md" % re.sub('\W+', '-', article_title.lower().strip())
@@ -429,7 +399,7 @@ class ArticleGenerator(object):
                 self._print_article(
                     article_title,
                     article_text,
-                    newsart.summary,
+                    article_summary,
                     article_keywords,
                     article_date,
                     article_img
@@ -438,7 +408,7 @@ class ArticleGenerator(object):
             self._print_article(
                 article_title,
                 article_text,
-                newsart.summary,
+                article_summary,
                 article_keywords,
                 article_date,
                 article_img
@@ -468,6 +438,7 @@ class ArticleGenerator(object):
             print('featured_image: %s' % article_img)
             print('tags: %s' % article_keywords)
             print('date: %s' % article_date.strftime('%d/%m/%Y'))
+            print('excerpt: %s' % article_summary)
             print('---')
             print(unidecode(article_text))
         else:
@@ -516,6 +487,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', "--password")
     parser.add_argument("-r", "--rss_file")
     parser.add_argument("-d", "--dbfile", default="argen.db")
+    parser.add_argument("-b", "--brain", default="markov", choices=["markov", "gpt2"])
     parser.add_argument("-f", "--force", action="store_true")
     parser.add_argument("-o", "--output", default="text", choices=["text", "json", "markdown"])
     parser.add_argument("-O", "--outdir", default=None, help="Output directory.")
@@ -534,6 +506,7 @@ if __name__ == "__main__":
 
     artgen = ArticleGenerator(
         args.dbfile,
+        brain=args.brain,
         output=args.output,
         outdir=args.outdir,
         hosturl=args.hosturl,
