@@ -28,7 +28,7 @@ class GPT2Brain(object):
             
         
         ai = aitextgen(tf_gpt2="124M", to_gpu=False)
-        ai.train(file_name, batch_size=1, num_steps=500, generate_every=100, save_every=250)
+        ai.train(file_name, batch_size=1, num_steps=1000, generate_every=100, save_every=250)
 
 #         sess = gpt2.start_tf_sess()
 #         model_name = "124M"

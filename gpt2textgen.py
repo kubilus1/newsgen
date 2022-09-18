@@ -142,7 +142,10 @@ class TextGen(object):
             while not raw_text:
                 print('Prompt should not be empty!')
                 raw_text = input("Model prompt >>> ")
-            text = self.get_text(raw_text)
+            text = self.get_text(
+                raw_text,
+                post_process=True
+            )
             print(text)
             continue
 
@@ -155,6 +158,8 @@ class TextGen(object):
             if in_text:
                 outtext = self.ai.generate_one(
                     prompt=in_text,
+                    repetition_penalty=1.5,
+                    no_repeat_ngram_size=64,
                     max_length=max_length,
                     temperature=self.temperature
                 )
@@ -189,6 +194,11 @@ class TextGen(object):
         if not post_process:
             return text
 
+        print("--------------------")
+        print("RAW:")
+        print(text)
+        print("--------------------")
+        
         lastperiod = text.rfind('.')
         text = text[:(lastperiod+1)]
 
@@ -200,7 +210,7 @@ class TextGen(object):
         if as_list:
             return list(deduped)
 
-        text = "  ".join(deduped)
+        text = " ".join(deduped)
         return text
 
 
