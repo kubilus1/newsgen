@@ -1,7 +1,8 @@
-build: requirements.txt
+build: requirements.txt *.py
 	echo $@
-	mkdir build
+	mkdir -p build
 	cp *.py $@/.
+	#cp -r files $@/.
 	cp requirements.txt $@/.
 	cd $@ && docker build -t newsgen -f ../Dockerfile .	
 

@@ -5,10 +5,10 @@ import json
 import os
 import numpy as np
 #import tensorflow as tf
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
 
 #import model, sample, encoder
-from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
+#from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from fuzzywuzzy import process
 from nltk import tokenize
 import nltk

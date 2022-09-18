@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-import gpt_2_simple as gpt2
+#import gpt_2_simple as gpt2
 import os
 import string
 import requests
