@@ -3,6 +3,7 @@
 import fire
 import json
 import os
+import re
 import numpy as np
 #import tensorflow as tf
 #import tensorflow.compat.v1 as tf
@@ -10,8 +11,8 @@ import numpy as np
 #import model, sample, encoder
 #from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from fuzzywuzzy import process
-from nltk import tokenize
-import nltk
+#from nltk import tokenize
+#import nltk
 
 from aitextgen import aitextgen
 
@@ -51,7 +52,7 @@ class TextGen(object):
         (i.e. contains the <model_name> folder)
         """
 
-        nltk.download('stopwords')
+        #nltk.download('stopwords')
         self.ai = aitextgen(model_folder="trained_model", to_gpu=False)
         self.temperature = temperature
 
@@ -146,7 +147,7 @@ class TextGen(object):
             continue
 
     def get_text(self, in_text="", endtoken="<|endoftext|>", max_cycles=3,
-            as_list=False, post_process=True, remove_prefix=True):
+            as_list=False, post_process=True, remove_prefix=True, max_length=512):
         
         initial_prompt = in_text
         text = ""
@@ -154,12 +155,12 @@ class TextGen(object):
             if in_text:
                 outtext = self.ai.generate_one(
                     prompt=in_text,
-                    max_length=512,
+                    max_length=max_length,
                     temperature=self.temperature
                 )
             else:
                 outtext = self.ai.generate_one(
-                    max_length=512,
+                    max_length=max_length,
                     temperature=self.temperature
                 )
 
@@ -195,7 +196,7 @@ class TextGen(object):
         #lines = tokenize.sent_tokenize(text)
         lines = re.split('(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
 
-        deduped = process.dedupe(lines, threshold=92)
+        deduped = process.dedupe(lines, threshold=80)
         if as_list:
             return list(deduped)
 
