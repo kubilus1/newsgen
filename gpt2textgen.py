@@ -196,7 +196,7 @@ class TextGen(object):
         #lines = tokenize.sent_tokenize(text)
         lines = re.split('(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
 
-        deduped = process.dedupe(lines, threshold=80)
+        deduped = process.dedupe(lines, threshold=70)
         if as_list:
             return list(deduped)
 

@@ -52,11 +52,13 @@ class GPT2Brain(object):
         
         title = ""
         while not title:
-            title = tg.get_text("title:", endtoken="\n", as_list=True, max_cycles=1, max_length=128)
-        
-        title = title[0]
+            title = tg.get_text("title:", as_list=True, max_cycles=1, max_length=128)[0]
+            print(title)
+
+        title = title.capitalize()
 
         print(f"GOT TITLE: {title}")
+
         text = tg.get_text(f"{title}\n", as_list=False)
         #print(texts)
         #print("Formatted ---->>")
