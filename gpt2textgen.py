@@ -13,6 +13,8 @@ from fuzzywuzzy import process
 from nltk import tokenize
 import nltk
 
+from aitextgen import aitextgen
+
 class TextGen(object):
 
     def __init__(
@@ -50,6 +52,10 @@ class TextGen(object):
         """
 
         nltk.download('stopwords')
+        self.ai = aitextgen(model_folder="trained_model", to_gpu=False)
+        self.temperature = temperature
+
+        return
 
         self.model_name = model_name
         self.models_dir = os.path.expanduser(os.path.expandvars(models_dir))
@@ -119,10 +125,10 @@ class TextGen(object):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if exc_type:
             print("Closing session.")
-            self.sess.close()
+            #self.sess.close()
 
-    def close(self):
-        self.sess.close()
+    #def close(self):
+    #    self.sess.close()
 
     def interact_model(
         self,
@@ -140,6 +146,76 @@ class TextGen(object):
             continue
 
     def get_text(self, in_text="", endtoken="<|endoftext|>", max_cycles=3,
+            as_list=False, post_process=True, remove_prefix=True):
+        
+        initial_prompt = in_text
+        text = ""
+        for i in range(max_cycles):
+            if in_text:
+                outtext = self.ai.generate_one(
+                    prompt=in_text,
+                    max_length=512,
+                    temperature=self.temperature
+                )
+            else:
+                outtext = self.ai.generate_one(
+                    max_length=512,
+                    temperature=self.temperature
+                )
+
+            if remove_prefix and i == 0:
+                # If on the first cycle, drop the prompt input
+                outtext = outtext.replace(initial_prompt, "", 1)
+
+            #print(outtext)
+            endtextpos = outtext.find(endtoken)
+            if endtextpos == -1:
+                #print(f"CONTINUED! {i}")
+                text += outtext
+                #lastlines = "\n".join(outtext.split('\n')[-10:])
+                lastlines = outtext[-128:]
+                #print(f"LAST LINES: {lastlines}")
+                in_text = lastlines
+            else:
+                #print("END DETECTED!")
+                text += outtext[:endtextpos]
+                break
+
+        #print("####ORIG####")
+        #print(text)
+        #print("####DEDUPED###")
+
+        if not post_process:
+            return text
+
+        lastperiod = text.rfind('.')
+        text = text[:(lastperiod+1)]
+
+        #lines = text.split('.')
+        #lines = tokenize.sent_tokenize(text)
+        lines = re.split('(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+
+        deduped = process.dedupe(lines, threshold=92)
+        if as_list:
+            return list(deduped)
+
+        text = "  ".join(deduped)
+        return text
+
+
+        ttt = tokenize.TextTilingTokenizer()
+        tiles = ttt.tokenize(text)
+        print("TILES ....")
+        print(len(tiles))
+        print(tiles)
+
+        outtext = ""
+        for t in tiles:
+            outtext += f"{t}\n"
+    
+        return outtext
+
+    def _get_text(self, in_text="", endtoken="<|endoftext|>", max_cycles=3,
             as_list=False, post_process=True, remove_prefix=True):
         
         initial_prompt = in_text
@@ -182,6 +258,8 @@ class TextGen(object):
 
         lastperiod = text.rfind('.')
         text = text[:(lastperiod+1)]
+
+        return text
 
 
         #lines = text.split('.')

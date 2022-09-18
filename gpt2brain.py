@@ -11,6 +11,7 @@ from unidecode import unidecode
 from fuzzywuzzy import process
 
 from gpt2textgen import TextGen
+from aitextgen import aitextgen
 
 class GPT2Brain(object):
     sess = None
@@ -21,22 +22,30 @@ class GPT2Brain(object):
         #self.in_text = in_text
 
     def build_model(self, in_text, key):
-        sess = gpt2.start_tf_sess()
-        model_name = "124M"
-        if not os.path.isdir(os.path.join("models", model_name)):
-                print(f"Downloading {model_name} model...")
-                gpt2.download_gpt2(model_name=model_name)   # model is saved into current directory under /models/124M/
-
         file_name = "/tmp/gpt-tune-data.txt"
         with open(file_name, 'w') as f:
             f.write(unidecode(in_text))
             
-        gpt2.finetune(sess,
-                    file_name,
-                    save_every=100,
-                    model_name=model_name,
-                    steps=100)   # steps is max number of training steps
+        
+        ai = aitextgen(tf_gpt2="124M", to_gpu=False)
+        ai.train(file_name, batch_size=1, num_steps=500, generate_every=100, save_every=250)
 
+#         sess = gpt2.start_tf_sess()
+#         model_name = "124M"
+#         if not os.path.isdir(os.path.join("models", model_name)):
+#                 print(f"Downloading {model_name} model...")
+#                 gpt2.download_gpt2(model_name=model_name)   # model is saved into current directory under /models/124M/
+# 
+#         file_name = "/tmp/gpt-tune-data.txt"
+#         with open(file_name, 'w') as f:
+#             f.write(unidecode(in_text))
+#             
+#         gpt2.finetune(sess,
+#                     file_name,
+#                     save_every=100,
+#                     model_name=model_name,
+#                     steps=100)   # steps is max number of training steps
+# 
 
     def get_article_text(self):
         tg = TextGen()

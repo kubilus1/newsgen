@@ -19,7 +19,7 @@ def interact():
         prompt = f"{transcript}\nQ {raw_text}"[-1023:]
         text = tg.get_text(prompt, endtoken="\nQ", post_process=False)
         print(text)
-        transcript += text
+        #transcript += text
 
 
 if __name__ == "__main__":

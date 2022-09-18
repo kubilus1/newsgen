@@ -4,6 +4,7 @@ fuzzywuzzy
 python-Levenshtein
 newspaper3k
 tinydb
-gpt-2-simple
+#gpt-2-simple
+aitextgen
 fire
 #tensorflow<=1.15
