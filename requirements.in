@@ -7,4 +7,5 @@ tinydb
 #gpt-2-simple
 aitextgen
 fire
+tensorflow
 #tensorflow<=1.15
