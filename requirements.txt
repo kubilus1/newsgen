@@ -42,7 +42,7 @@ newspaper3k==0.2.8
     # via -r requirements.in
 nltk==3.7
     # via newspaper3k
-pillow==9.2.0
+pillow==9.3.0
     # via newspaper3k
 python-dateutil==2.8.2
     # via newspaper3k
